@@ -10,7 +10,7 @@ const express = require("express");
 const morgan = require("morgan");
 const bodyParser = require("body-parser");
 
-// import the blockchain class
+// import the blockchain class. keeps only one instance of the blockchain
 const BlockChain = require('./src/blockchain.js');
 
 class ApplicationServer {
