@@ -150,7 +150,12 @@ class Blockchain {
     getBlockByHash(hash) {
         let self = this;
         return new Promise((resolve, reject) => {
-           
+            let matching_block = self.chain.filter(x => x.hash === hash);
+            if(matching_block.length){
+                resolve(matching_block[0])
+            }else{
+                reject('hash not found')
+            }
         });
     }
 
@@ -181,7 +186,9 @@ class Blockchain {
         let self = this;
         let stars = [];
         return new Promise((resolve, reject) => {
-            
+            // for i in self.chain, if hash matches: add to stars (x.getDBdata) to decode
+
+            resolve(stars)
         });
     }
 
