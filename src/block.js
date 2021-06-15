@@ -65,10 +65,10 @@ class Block {
         return new Promise((resolve, reject) => {
             // Decoding the data to retrieve the JSON representation of the object
             // Parse the data to an object to be retrieve.
-            const data = JSON.parse(hex2ascii(self.body))
+            let data = JSON.parse(hex2ascii(self.body));
 
             // Resolve with the data if the object isn't the Genesis block
-            self.height === 0 ? resolve('') : 'data' in data ? resolve(data) : reject("invalid block data: " + data)
+            self.height === 0 ? resolve(null) : 'data' in data ? resolve(data) : reject("invalid block data: " + data)
 
         })
     }

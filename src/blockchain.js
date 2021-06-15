@@ -70,13 +70,15 @@ class Blockchain {
                     // previous block hash
                     block.previousHash = self.chain[self.chain.length-1].hash;
                 }
+                block.time = new Date().getTime().toString().slice(0,-3);
+                block.height = self.chain.length;
+
                 // SHA256 requires a string of data
                 block.hash = SHA256(JSON.stringify(block)).toString();
-                block.time = new Date().getTime().toString().slice(0,-3);
 
                 // add block to chain
                 self.chain.push(block);
-                self.height = block.height = self.chain.length
+                self.height = self.chain.length;
 
                 resolve(block)
             } catch (e) {
@@ -125,7 +127,7 @@ class Blockchain {
 
                if (currentTime-timestamp < 300){
                    if (bitcoinMessage.verify(message, address, signature)){
-                       let block = new BlockClass.Block({data: star});
+                       let block = new BlockClass.Block({data: star, address: address});
                        resolve(self._addBlock(block))
                    }else {
                        reject('invalid signature')
@@ -187,7 +189,12 @@ class Blockchain {
         let stars = [];
         return new Promise((resolve, reject) => {
             // for i in self.chain, if hash matches: add to stars (x.getDBdata) to decode
-
+            for(let b=0; b<self.chain.length; b++){
+                let bData = self.chain[b].getBData();
+                if (bData['address'] === address){
+                    stars.push(bData['data'])
+                }
+            }
             resolve(stars)
         });
     }
@@ -202,7 +209,15 @@ class Blockchain {
         let self = this;
         let errorLog = [];
         return new Promise(async (resolve, reject) => {
-            
+            for(let b=0; b<self.chain.length; b++){
+                let block = self.chain[b];
+                if (!block.validate()){
+                    errorLog.push({'hash':block.hash,'error':'invalid block'})
+                }
+                if(b>0 && block.hash !== block.previousBlockHash){
+                    errorLog.push({'hash':block.hash,'error':'invalid connection to previous block'})
+                }
+            }
         });
     }
 
