@@ -105,3 +105,6 @@ dist
 
 # IDE specific
 .idea/
+
+# Locks
+package-lock.json

@@ -42,11 +42,13 @@ class Block {
             // Save in auxiliary variable the current block hash
             let originalHash = self.hash;
 
-            // Recalculate the hash of the Block
-            let newHash = SHA256(JSON.stringify(self)).toString();
+            // Recalculate the hash of the Block without a hash
+            let copy = Object.assign({}, self);
+            copy.hash = null
+            let newHash = SHA256(JSON.stringify(copy)).toString();
 
             // Comparing if the hashes changed
-            resolve(originalHash === newHash)
+            resolve(self.height === 0 ? true : originalHash === newHash)
         });
     }
 

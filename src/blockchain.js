@@ -68,7 +68,7 @@ class Blockchain {
             try{
                 if (self.chain.length > 0) {
                     // previous block hash
-                    block.previousHash = self.chain[self.chain.length-1].hash;
+                    block.previousBlockHash = self.chain[self.chain.length-1].hash;
                 }
                 block.time = new Date().getTime().toString().slice(0,-3);
                 block.height = self.chain.length;
@@ -96,6 +96,7 @@ class Blockchain {
      * @param {*} address 
      */
     requestMessageOwnershipVerification(address) {
+        console.log('here'+address)
         return new Promise((resolve) => {
             resolve(`${address}:${new Date().getTime().toString().slice(0,-3)}:starRegistry`);
         });
@@ -125,15 +126,24 @@ class Blockchain {
                let timestamp = parseInt(message.split(':')[1]);
                let currentTime = parseInt(new Date().getTime().toString().slice(0, -3));
 
-               if (currentTime-timestamp < 300){
-                   if (bitcoinMessage.verify(message, address, signature)){
-                       let block = new BlockClass.Block({data: star, address: address});
-                       resolve(self._addBlock(block))
-                   }else {
-                       reject('invalid signature')
+               if (currentTime-timestamp < 30000){
+                   try{
+                       if (bitcoinMessage.verify(message, address, signature)){
+                           let block = new BlockClass.Block({data: star, address: address});
+                           resolve(self._addBlock(block))
+                       }else {
+                           reject('invalid signature')
+                       }
+                   }catch (e){
+                       // checkSegwitAlways = True for Electrum Support (it doesn't encode signatures into Base58)
+                       if (bitcoinMessage.verify(message, address, signature, null, true)){
+                           let block = new BlockClass.Block({data: star, address: address});
+                           resolve(self._addBlock(block))
+                       }else {
+                           reject('invalid signature')
+                       }
                    }
-               }
-               else {
+               }else {
                    reject('timestamp expired')
                }
            }
@@ -155,9 +165,8 @@ class Blockchain {
             let matching_block = self.chain.filter(x => x.hash === hash);
             if(matching_block.length){
                 resolve(matching_block[0])
-            }else{
-                reject('hash not found')
             }
+            resolve(null)
         });
     }
 
@@ -190,10 +199,11 @@ class Blockchain {
         return new Promise((resolve, reject) => {
             // for i in self.chain, if hash matches: add to stars (x.getDBdata) to decode
             for(let b=0; b<self.chain.length; b++){
-                let bData = self.chain[b].getBData();
-                if (bData['address'] === address){
-                    stars.push(bData['data'])
-                }
+                self.chain[b].getBData().then(function(bData){
+                    if (bData['address'] === address){
+                        stars.push(bData['data'])
+                    }
+                });
             }
             resolve(stars)
         });
@@ -211,13 +221,24 @@ class Blockchain {
         return new Promise(async (resolve, reject) => {
             for(let b=0; b<self.chain.length; b++){
                 let block = self.chain[b];
-                if (!block.validate()){
-                    errorLog.push({'hash':block.hash,'error':'invalid block'})
-                }
-                if(b>0 && block.hash !== block.previousBlockHash){
-                    errorLog.push({'hash':block.hash,'error':'invalid connection to previous block'})
+                block.validate().then(function (validation){
+                    if(!validation){
+                        errorLog.push({
+                            'hash':block.hash,
+                            'error':'invalid block',
+                            'height':block.height
+                        })
+                    }
+                })
+                if(b>0 && self.chain[b-1].hash !== block.previousBlockHash){
+                    errorLog.push({
+                        'hash':block.hash,
+                        'error':'invalid connection to previous block',
+                        'height':block.height
+                    })
                 }
             }
+            resolve(errorLog)
         });
     }
 
