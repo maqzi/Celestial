@@ -65,25 +65,30 @@ class Blockchain {
     _addBlock(block) {
         let self = this;
         return new Promise(async (resolve, reject) => {
-            try{
-                if (self.chain.length > 0) {
-                    // previous block hash
-                    block.previousBlockHash = self.chain[self.chain.length-1].hash;
+            self.validateChain().then(errors => {
+                if (!errors.length){
+                    try{
+                        if (self.chain.length > 0) {
+                            // previous block hash
+                            block.previousBlockHash = self.chain[self.chain.length-1].hash;
+                        }
+                        block.time = new Date().getTime().toString().slice(0,-3);
+                        block.height = self.chain.length;
+
+                        // SHA256 requires a string of data
+                        block.hash = SHA256(JSON.stringify(block)).toString();
+
+                        // add block to chain
+                        self.chain.push(block);
+                        self.height = self.chain.length;
+
+                        resolve(block)
+                    } catch (e) {
+                        reject(e)
+                    }
                 }
-                block.time = new Date().getTime().toString().slice(0,-3);
-                block.height = self.chain.length;
-
-                // SHA256 requires a string of data
-                block.hash = SHA256(JSON.stringify(block)).toString();
-
-                // add block to chain
-                self.chain.push(block);
-                self.height = self.chain.length;
-
-                resolve(block)
-            } catch (e) {
-                reject(e)
-            }
+                reject(errors)
+            })
         });
     }
 
@@ -126,7 +131,7 @@ class Blockchain {
                let timestamp = parseInt(message.split(':')[1]);
                let currentTime = parseInt(new Date().getTime().toString().slice(0, -3));
 
-               if (currentTime-timestamp < 30000){
+               if (currentTime-timestamp < 300){
                    try{
                        if (bitcoinMessage.verify(message, address, signature)){
                            let block = new BlockClass.Block({data: star, address: address});
@@ -178,7 +183,7 @@ class Blockchain {
     getBlockByHeight(height) {
         let self = this;
         return new Promise((resolve, reject) => {
-            let block = self.chain.filter(p => p.height === height)[0];
+            let block = self.chain.find(p => p.height === height);
             if(block){
                 resolve(block);
             } else {
